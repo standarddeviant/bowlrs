@@ -31,7 +31,12 @@ fn lets_go_bowling() -> Game {
         let mut frame_sum = 0;
         let roll_start = game.rolls.len();
         // for roll_ix in 0..2
-        while frame_sum < 10 && game.rolls.len() < roll_start + 2 {
+        loop {
+            if frame_ix < 9 && frame_sum >= 10 || game.rolls.len() >= roll_start + 2 {
+                break;
+            }
+            if frame_ix == 9 { /* TODO */ }
+
             // frame loop: get roll input
             print!(
                 "Frame={}, Roll={}, Enter knocked down pins: ",
@@ -52,7 +57,7 @@ fn lets_go_bowling() -> Game {
                     frame_sum += roll;
                     game.rolls.push(roll);
                 }
-                Error => {
+                _ => {
                     println!(
                         "Error: invalid roll, please enter a value between 0 and {}",
                         10 - frame_sum
@@ -74,17 +79,43 @@ fn lets_go_bowling() -> Game {
             score,
         });
 
-        update_scores(&game);
+        update_scores(&mut game);
         display_game(&game);
     } // end game_loop
 
     game // return game variable
 }
 
-fn update_scores(mut g: &Game) {
-    for frame in &g.frames {
-        println!("TEST: frame = {frame:?}");
+fn update_scores(g: &mut Game) {
+    for ix in 0..g.frames.len() {
+        // check frame for None score
+        let f: &mut Frame = g.frames.get_mut(ix).unwrap();
+        if let Some(_val) = f.score {
+            continue;
+        }
+
+        // for sanity, let's assert strike/spare
+        assert!(g.rolls[f.start..f.end].iter().sum::<usize>() == 10);
+
+        // handle updateable spare case
+        if 2==f.end-f.start && g.rolls.len() >= f.end+1 {
+            f.score = Some(10 + g.rolls[f.end+0]);
+        }
+        // handle updateable strike case
+        else if 1==f.end-f.start && g.rolls.len() >= f.end+2 {
+            f.score = Some(10 + g.rolls[f.end+0] + g.rolls[f.end+1]);
+        }
+        println!("TEST: frame = {f:?}");
     }
+
+    // update game score
+    let mut gscore = 0;
+    for ix in 0..g.frames.len() {
+        if let Some(fscore) = g.frames[ix].score {
+            gscore += fscore;
+        }
+    }
+    g.score = gscore;
 }
 
 fn display_game(g: &Game) {
